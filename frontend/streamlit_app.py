@@ -10,7 +10,7 @@ import plotly.graph_objects as go
 from typing import Dict
 
 # Configuration
-API_BASE_URL = "http://localhost:8000/api/v1"
+API_BASE_URL = "https://ai-neuro.onrender.com"
 
 st.set_page_config(
     page_title="Adaptive Learning Dashboard",
