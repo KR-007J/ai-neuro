@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: neuro-adaptive-learning-api
+    runtime: docker
+    plan: free
+    branch: main
+    healthCheckPath: /health
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: false
+      - key: API_HOST
+        value: 0.0.0.0
+      - key: API_PORT
+        value: 10000
+      - key: LOG_LEVEL
+        value: INFO
