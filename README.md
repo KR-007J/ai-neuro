@@ -229,11 +229,23 @@ python training/train_difficulty_model.py
 
 ## 🎨 Frontend (Optional)
 
-Run the Streamlit dashboard:
+Run the **modern, vibrant dashboard**:
 
+### Simple Method (No installation needed!)
 ```bash
-streamlit run frontend/streamlit_app.py
+cd frontend
+python -m http.server 8080
+# Open http://localhost:8080
 ```
+
+### Features:
+- ✨ **Smooth Animations** - Enterprise-grade transitions
+- 🎨 **Vibrant Design** - Modern gradients and glass morphism
+- 📱 **Fully Responsive** - Works on all devices
+- 🚀 **No Dependencies** - Pure HTML/CSS/JavaScript
+- 💫 **Animated Background** - Floating gradient orbs
+
+See `frontend/README.md` for more options!
 
 ---
 
