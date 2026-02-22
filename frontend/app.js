@@ -1,7 +1,7 @@
 // NeuroLearn AI - Dashboard Interactivity
 
 // API Base URL
-const API_BASE_URL = 'https://ai-neuro-1.onrender.com/api/v1';
+const API_BASE_URL = 'https://ai-neuro.onrender.com/api/v1';
 
 // Initialize on load
 document.addEventListener('DOMContentLoaded', () => {
