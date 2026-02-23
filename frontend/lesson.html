@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeuroLearn - AI Lesson</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        body { background: var(--gray-50); }
+        .lesson-page { max-width: 860px; margin: 0 auto; padding: 32px 24px; position: relative; z-index: 1; }
+        .back-btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            color: #667eea; font-weight: 600; font-size: 14px;
+            text-decoration: none; margin-bottom: 24px;
+            background: white; padding: 8px 16px; border-radius: 10px;
+            border: 1px solid #e5e7eb; transition: all 0.2s;
+        }
+        .back-btn:hover { box-shadow: 0 4px 12px rgba(102,126,234,0.15); transform: translateX(-2px); }
+        .lesson-card { background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.06); }
+        .lesson-header {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            padding: 40px; color: white;
+        }
+        .lesson-meta { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+        .lesson-tag {
+            background: rgba(255,255,255,0.2); padding: 4px 12px;
+            border-radius: 20px; font-size: 12px; font-weight: 600;
+        }
+        .lesson-header h1 { font-size: 28px; font-weight: 800; margin-bottom: 8px; }
+        .lesson-header p { opacity: 0.85; font-size: 15px; }
+        .objectives {
+            background: rgba(255,255,255,0.15); border-radius: 12px;
+            padding: 16px 20px; margin-top: 20px;
+        }
+        .objectives h4 {
+            font-size: 13px; font-weight: 700; opacity: 0.8;
+            margin-bottom: 8px; letter-spacing: 0.05em;
+        }
+        .objectives ul { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+        .objectives li { font-size: 14px; display: flex; align-items: center; gap: 8px; }
+        .objectives li::before { content: '✓'; font-weight: 700; }
+        .lesson-body { padding: 40px; }
+        .section-block { margin-bottom: 40px; }
+        .section-block h3 {
+            font-size: 20px; font-weight: 700; color: #111827;
+            margin-bottom: 16px; padding-bottom: 8px;
+            border-bottom: 2px solid #f3f4f6;
+        }
+        .section-block p { font-size: 15px; line-height: 1.8; color: #374151; margin-bottom: 16px; }
+        .key-point {
+            background: linear-gradient(135deg, #667eea10, #764ba210);
+            border-left: 4px solid #667eea; border-radius: 0 12px 12px 0;
+            padding: 14px 18px; font-size: 14px; font-weight: 600;
+            color: #374151; margin-top: 16px;
+        }
+        .key-point::before { content: '💡 Key Point: '; color: #667eea; }
+        .code-block {
+            background: #1f2937; color: #e5e7eb; padding: 24px;
+            border-radius: 12px; font-family: 'JetBrains Mono', monospace;
+            font-size: 13px; line-height: 1.7; overflow-x: auto;
+            margin: 16px 0; position: relative;
+        }
+        .code-block pre { margin: 0; white-space: pre-wrap; word-break: break-word; }
+        .code-label {
+            position: absolute; top: 8px; right: 12px;
+            font-size: 11px; color: #6b7280;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        .quiz-section { margin-top: 48px; }
+        .quiz-section h2 { font-size: 22px; font-weight: 800; color: #111827; margin-bottom: 24px; }
+        .quiz-question {
+            background: #f9fafb; border-radius: 16px; padding: 24px;
+            margin-bottom: 20px; border: 2px solid #e5e7eb; transition: border-color 0.2s;
+        }
+        .quiz-question.correct  { border-color: #10b981; background: #f0fdf4; }
+        .quiz-question.incorrect { border-color: #ef4444; background: #fef2f2; }
+        .question-text { font-size: 16px; font-weight: 600; color: #111827; margin-bottom: 16px; }
+        .options { display: flex; flex-direction: column; gap: 10px; }
+        .option-btn {
+            padding: 12px 16px; background: white; border: 2px solid #e5e7eb;
+            border-radius: 10px; text-align: left; cursor: pointer; font-size: 14px;
+            font-weight: 500; color: #374151; transition: all 0.2s;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        .option-btn:hover:not(:disabled) { border-color: #667eea; color: #667eea; }
+        .option-btn.selected-correct   { background: #10b981; border-color: #10b981; color: white; }
+        .option-btn.selected-incorrect { background: #ef4444; border-color: #ef4444; color: white; }
+        .option-btn.reveal-correct     { background: #d1fae5; border-color: #10b981; color: #065f46; }
+        .feedback-box {
+            margin-top: 12px; padding: 12px 16px; background: white;
+            border-radius: 10px; font-size: 13px; color: #374151;
+            line-height: 1.6; display: none; border: 1px solid #e5e7eb;
+        }
+        .feedback-box.visible { display: block; }
+        .ai-loading {
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; padding: 80px 40px; gap: 20px;
+        }
+        .ai-loading-spinner {
+            width: 56px; height: 56px; border: 4px solid #e5e7eb;
+            border-top-color: #667eea; border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        .ai-loading p     { color: #667eea; font-weight: 600; font-size: 16px; }
+        .ai-loading small { color: #9ca3af; font-size: 13px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .summary-box {
+            background: linear-gradient(135deg, #667eea08, #764ba208);
+            border: 1px solid #667eea30; border-radius: 16px;
+            padding: 24px; margin: 32px 0;
+        }
+        .summary-box h3 { font-size: 16px; font-weight: 700; color: #667eea; margin-bottom: 8px; }
+        .summary-box p  { font-size: 15px; color: #374151; line-height: 1.7; }
+        .next-topic-badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white; padding: 8px 16px; border-radius: 20px;
+            font-size: 13px; font-weight: 600; margin-top: 12px;
+        }
+        .lesson-actions {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 24px 40px; border-top: 1px solid #f3f4f6; background: #fafafa;
+        }
+        .complete-btn {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white; border: none; padding: 12px 28px;
+            border-radius: 12px; font-size: 15px; font-weight: 700;
+            cursor: pointer; transition: all 0.2s;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        .complete-btn:hover    { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(16,185,129,0.3); }
+        .complete-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .score-badge { font-size: 14px; font-weight: 600; color: #6b7280; }
+        .score-badge span { color: #667eea; font-size: 20px; font-weight: 800; }
+        .error-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white; border: none; padding: 12px 28px;
+            border-radius: 12px; font-size: 15px; font-weight: 700;
+            cursor: pointer; margin-top: 16px;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <div class="animated-bg">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+    </div>
+
+    <div class="lesson-page">
+        <a href="index.html" class="back-btn">← Back to Dashboard</a>
+
+        <div class="lesson-card" id="lesson-card">
+            <div class="ai-loading" id="ai-loading">
+                <div class="ai-loading-spinner"></div>
+                <p>🧠 Gemini AI is generating your lesson...</p>
+                <small>Personalizing content for your learning style</small>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'https://ai-neuro-backend.onrender.com';
+
+        // Get user from localStorage
+        const userStr = localStorage.getItem('neurolearn_user');
+        const currentUser = userStr ? JSON.parse(userStr) : null;
+        if (!currentUser) window.location.href = 'login.html';
+
+        // Get URL params
+        const params     = new URLSearchParams(window.location.search);
+        const topic      = params.get('topic')      || 'Dictionary Methods & Comprehensions';
+        const difficulty = params.get('difficulty') || 'intermediate';
+
+        let lessonData   = null;
+        let quizScore    = 0;
+        let quizAnswered = 0;
+
+        window.addEventListener('load', generateLesson);
+
+        async function generateLesson() {
+            // Show loading state
+            document.getElementById('lesson-card').innerHTML = `
+                <div class="ai-loading">
+                    <div class="ai-loading-spinner"></div>
+                    <p>🧠 Gemini AI is generating your lesson...</p>
+                    <small>Personalizing content for your learning style</small>
+                </div>
+            `;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/v1/adaptation/generate-lesson`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: currentUser.user_id,
+                        topic: topic,
+                        learning_style: currentUser.learning_style || 'visual',
+                        difficulty: difficulty,
+                        user_name: currentUser.name?.split(' ')[0] || 'Student',
+                        cognitive_capacity: currentUser.cognitive_capacity || 7.0
+                    })
+                });
+
+                if (!response.ok) throw new Error('Generation failed');
+
+                const result = await response.json();
+                lessonData = result.data;
+                renderLesson(lessonData);
+
+            } catch (error) {
+                console.error('Lesson generation error:', error);
+                renderError();
+            }
+        }
+
+        function renderLesson(lesson) {
+            const card = document.getElementById('lesson-card');
+
+            const sectionsHTML = lesson.sections.map(section => `
+                <div class="section-block">
+                    <h3>${section.heading}</h3>
+                    <p>${section.content}</p>
+                    ${section.code_example ? `
+                        <div class="code-block">
+                            <span class="code-label">Python</span>
+                            <pre>${escapeHtml(section.code_example)}</pre>
+                        </div>` : ''}
+                    ${section.key_point ? `
+                        <div class="key-point">${section.key_point}</div>` : ''}
+                </div>
+            `).join('');
+
+            const quizHTML = lesson.quiz.map((q, i) => `
+                <div class="quiz-question" id="q-${i}">
+                    <div class="question-text">Q${i + 1}. ${q.question}</div>
+                    <div class="options">
+                        ${q.options.map((opt, j) => `
+                            <button class="option-btn"
+                                onclick="answerQuiz(${i}, ${j})"
+                                id="opt-${i}-${j}">
+                                ${String.fromCharCode(65 + j)}. ${opt}
+                            </button>
+                        `).join('')}
+                    </div>
+                    <div class="feedback-box" id="feedback-${i}"></div>
+                </div>
+            `).join('');
+
+            card.innerHTML = `
+                <div class="lesson-header">
+                    <div class="lesson-meta">
+                        <span class="lesson-tag">🤖 AI Generated</span>
+                        <span class="lesson-tag">${lesson.duration_minutes} min</span>
+                        <span class="lesson-tag">${difficulty}</span>
+                        <span class="lesson-tag">${currentUser.learning_style || 'visual'} learner</span>
+                    </div>
+                    <h1>${lesson.title}</h1>
+                    <p>${lesson.module}</p>
+                    <div class="objectives">
+                        <h4>LEARNING OBJECTIVES</h4>
+                        <ul>${lesson.objectives.map(o => `<li>${o}</li>`).join('')}</ul>
+                    </div>
+                </div>
+
+                <div class="lesson-body">
+                    ${sectionsHTML}
+
+                    <div class="summary-box">
+                        <h3>📝 Summary</h3>
+                        <p>${lesson.summary}</p>
+                        <div class="next-topic-badge">→ Next: ${lesson.next_topic}</div>
+                    </div>
+
+                    <div class="quiz-section">
+                        <h2>🧪 Knowledge Check</h2>
+                        ${quizHTML}
+                    </div>
+                </div>
+
+                <div class="lesson-actions">
+                    <div class="score-badge">
+                        Quiz Score: <span id="score-display">0</span> / ${lesson.quiz.length}
+                    </div>
+                    <button class="complete-btn" onclick="markComplete()" id="complete-btn">
+                        Mark Complete ✓
+                    </button>
+                </div>
+            `;
+        }
+
+        async function answerQuiz(questionIndex, answerIndex) {
+            const q = lessonData.quiz[questionIndex];
+
+            // Disable all options for this question
+            document.querySelectorAll(`#q-${questionIndex} .option-btn`)
+                .forEach(btn => btn.disabled = true);
+
+            const isCorrect   = answerIndex === q.correct;
+            const questionEl  = document.getElementById(`q-${questionIndex}`);
+            const feedbackEl  = document.getElementById(`feedback-${questionIndex}`);
+            const selectedBtn = document.getElementById(`opt-${questionIndex}-${answerIndex}`);
+
+            selectedBtn.classList.add(isCorrect ? 'selected-correct' : 'selected-incorrect');
+
+            if (!isCorrect) {
+                document.getElementById(`opt-${questionIndex}-${q.correct}`)
+                    .classList.add('reveal-correct');
+            }
+
+            questionEl.classList.add(isCorrect ? 'correct' : 'incorrect');
+
+            if (isCorrect) quizScore++;
+            quizAnswered++;
+
+            const scoreEl = document.getElementById('score-display');
+            if (scoreEl) scoreEl.textContent = quizScore;
+
+            // Show AI feedback
+            feedbackEl.textContent = '🤖 Getting personalized feedback...';
+            feedbackEl.classList.add('visible');
+
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/v1/adaptation/quiz-feedback`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        question: q.question,
+                        user_answer: answerIndex,
+                        correct_answer: q.correct,
+                        explanation: q.explanation,
+                        learning_style: currentUser.learning_style || 'visual'
+                    })
+                });
+
+                const data = await res.json();
+                feedbackEl.textContent = data.data.feedback;
+
+            } catch {
+                feedbackEl.textContent = isCorrect
+                    ? `✅ Correct! ${q.explanation}`
+                    : `❌ ${q.explanation}`;
+            }
+        }
+
+        async function markComplete() {
+            const btn = document.getElementById('complete-btn');
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+
+            try {
+                await fetch(`${API_BASE_URL}/api/v1/assessment/analytics`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: currentUser.user_id,
+                        session_id: `session_${Date.now()}`,
+                        engagement_score: 0.85,
+                        focus_level: 0.80,
+                        interaction_count: quizAnswered,
+                        time_on_task_minutes: lessonData?.duration_minutes || 30,
+                        completion_rate: 1.0,
+                        error_rate: quizAnswered > 0
+                            ? (quizAnswered - quizScore) / quizAnswered
+                            : 0,
+                        help_requests: 0
+                    })
+                });
+            } catch (e) {
+                console.log('Analytics error:', e);
+            }
+
+            btn.textContent = '✅ Completed!';
+            btn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+
+            setTimeout(() => window.location.href = 'index.html', 1500);
+        }
+
+        function renderError() {
+            document.getElementById('lesson-card').innerHTML = `
+                <div class="ai-loading">
+                    <p style="color:#ef4444; font-size:18px;">⚠️ Failed to generate lesson</p>
+                    <small>Check your GEMINI_API_KEY in Render environment variables</small>
+                    <button class="error-btn" onclick="generateLesson()">Try Again</button>
+                </div>
+            `;
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+    </script>
+</body>
+</html>

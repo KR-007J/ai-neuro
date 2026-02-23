@@ -1,16 +1,105 @@
-// NeuroLearn AI - Dashboard Interactivity
 
 const API_BASE_URL = 'https://ai-neuro-backend.onrender.com';
 
+// ========================================
+// AUTH - Get logged in user
+// ========================================
+
+function getCurrentUser() {
+    const userStr = localStorage.getItem('neurolearn_user');
+    if (!userStr) {
+        window.location.href = 'login.html';
+        return null;
+    }
+    try {
+        return JSON.parse(userStr);
+    } catch {
+        localStorage.removeItem('neurolearn_user');
+        window.location.href = 'login.html';
+        return null;
+    }
+}
+
+function logout() {
+    localStorage.removeItem('neurolearn_user');
+    window.location.href = 'login.html';
+}
+
+// Get current user — redirects to login if not authenticated
+const currentUser = getCurrentUser();
+const USER_ID = currentUser?.user_id || 'demo_user_123';
+
+// ========================================
 // Initialize on load
+// ========================================
+
 document.addEventListener('DOMContentLoaded', () => {
+    setupUserProfile();
     initializeNavigation();
     initializeAnimations();
-    loadUserData();
-    loadRecommendations();
+    wakeBackend();
+
+    // Wait 2s for backend to wake then load data
+    setTimeout(() => {
+        loadUserData();
+        loadRecommendations();
+    }, 2000);
 });
 
-// Navigation handling
+// ========================================
+// Setup sidebar with real user data
+// ========================================
+
+function setupUserProfile() {
+    if (!currentUser) return;
+
+    // Update avatar — use Google profile photo if available
+    const avatarEl = document.querySelector('.user-avatar');
+    if (avatarEl) {
+        if (currentUser.avatar) {
+            avatarEl.innerHTML = `
+                <img src="${currentUser.avatar}"
+                    style="width:40px;height:40px;border-radius:50%;object-fit:cover;"
+                    alt="avatar"
+                    onerror="this.outerHTML='<span>${getInitials(currentUser.name)}</span>'">
+            `;
+        } else {
+            avatarEl.innerHTML = `<span>${getInitials(currentUser.name)}</span>`;
+        }
+    }
+
+    // Update sidebar name
+    const nameEl = document.querySelector('.user-name');
+    if (nameEl) nameEl.textContent = currentUser.name || 'User';
+
+    // Update page title with first name
+    const titleEl = document.querySelector('.page-title');
+    const firstName = currentUser.name?.split(' ')[0] || 'there';
+    if (titleEl) titleEl.textContent = `Welcome back, ${firstName} 👋`;
+}
+
+function getInitials(name) {
+    if (!name) return 'U';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+}
+
+// ========================================
+// Wake backend (free tier cold start)
+// ========================================
+
+async function wakeBackend() {
+    try {
+        await fetch(`${API_BASE_URL}/health`);
+        console.log('Backend is awake');
+    } catch (e) {
+        console.log('Backend waking up...');
+    }
+}
+
+// ========================================
+// Navigation
+// ========================================
+
 function initializeNavigation() {
     const navItems = document.querySelectorAll('.nav-item');
     navItems.forEach(item => {
@@ -29,7 +118,10 @@ function navigateToPage(page) {
     console.log('Navigating to:', page);
 }
 
-// Initialize scroll animations
+// ========================================
+// Scroll animations
+// ========================================
+
 function initializeAnimations() {
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
@@ -45,129 +137,123 @@ function initializeAnimations() {
     });
 }
 
-// ============================================
-// API INTEGRATION - Load User Data
-// ============================================
+// ========================================
+// Load user data from API
+// ========================================
 
 async function loadUserData() {
-    const userId = 'demo_user_123';
-
     try {
         showLoadingState();
 
-        const response = await fetch(`${API_BASE_URL}/api/v1/users/${userId}`, {
+        const response = await fetch(`${API_BASE_URL}/api/v1/users/${USER_ID}`, {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' }
         });
 
         if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
 
-        const data = await response.json();
-        updateDashboard(data);
+        const result = await response.json();
+        updateDashboard(result.data);
 
     } catch (error) {
         console.error('Error loading user data:', error);
-        showFallbackData(); // Show static data if API fails
+        showFallbackData();
     }
 }
 
-// ============================================
-// API INTEGRATION - Load Recommendations
-// ============================================
+// ========================================
+// Load recommendations from API
+// ========================================
 
 async function loadRecommendations() {
-    const userId = 'demo_user_123';
-
     try {
         const response = await fetch(`${API_BASE_URL}/api/v1/adaptation/recommend-content`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                user_id: userId,
+                user_id: USER_ID,
                 user_profile: {
-                    user_id: userId,
-                    learning_style: 'visual',
-                    cognitive_load_capacity: 7.5
+                    user_id: USER_ID,
+                    learning_style: currentUser?.learning_style || 'visual',
+                    cognitive_load_capacity: currentUser?.cognitive_capacity || 7.5
                 },
                 performance_history: [0.75, 0.78, 0.82],
                 completed_content: []
             })
         });
 
-        if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
+        if (!response.ok) {
+            const err = await response.json();
+            console.error('Recommendations error:', JSON.stringify(err, null, 2));
+            throw new Error(`HTTP error: ${response.status}`);
+        }
 
-        const data = await response.json();
-        updateRecommendations(data);
+        const result = await response.json();
+        updateRecommendations(result.data);
 
     } catch (error) {
         console.error('Error loading recommendations:', error);
-        // Static recommendations already in HTML - no update needed
     }
 }
 
-// ============================================
-// UPDATE DASHBOARD WITH API DATA
-// ============================================
+// ========================================
+// Update dashboard with API data
+// ========================================
 
 function updateDashboard(data) {
-    // Update stat cards
+    if (!data) return;
+
+    // Stat cards
     if (data.sessions_completed !== undefined) {
-        const sessionEl = document.querySelector('.stat-card:nth-child(1) .stat-value');
-        if (sessionEl) sessionEl.textContent = data.sessions_completed;
+        const el = document.querySelector('.stat-card:nth-child(1) .stat-value');
+        if (el) el.textContent = data.sessions_completed;
     }
 
     if (data.average_score !== undefined) {
-        const scoreEl = document.querySelector('.stat-card:nth-child(2) .stat-value');
-        if (scoreEl) scoreEl.innerHTML = `${(data.average_score * 100).toFixed(1)}<span class="stat-unit">%</span>`;
+        const el = document.querySelector('.stat-card:nth-child(2) .stat-value');
+        if (el) el.innerHTML = `${(data.average_score * 100).toFixed(1)}<span class="stat-unit">%</span>`;
     }
 
     if (data.engagement_level !== undefined) {
-        const engageEl = document.querySelector('.stat-card:nth-child(3) .stat-value');
-        if (engageEl) engageEl.innerHTML = `${(data.engagement_level * 100).toFixed(0)}<span class="stat-unit">%</span>`;
+        const el = document.querySelector('.stat-card:nth-child(3) .stat-value');
+        if (el) el.innerHTML = `${(data.engagement_level * 100).toFixed(0)}<span class="stat-unit">%</span>`;
     }
 
     if (data.streak_days !== undefined) {
-        const streakEl = document.querySelector('.stat-card:nth-child(4) .stat-value');
-        if (streakEl) streakEl.innerHTML = `🔥 <span>${data.streak_days}</span>`;
+        const el = document.querySelector('.stat-card:nth-child(4) .stat-value');
+        if (el) el.innerHTML = `🔥 <span>${data.streak_days}</span>`;
     }
 
-    // Update cognitive profile
+    // Cognitive profile
     if (data.learning_style) {
-        const styleEl = document.querySelector('.profile-stat:nth-child(1) .profile-stat-value');
-        if (styleEl) styleEl.textContent = capitalize(data.learning_style);
+        const el = document.querySelector('.profile-stat:nth-child(1) .profile-stat-value');
+        if (el) el.textContent = capitalize(data.learning_style);
     }
 
     if (data.cognitive_load_capacity) {
-        const loadEl = document.querySelector('.profile-stat:nth-child(2) .profile-stat-value');
-        if (loadEl) loadEl.textContent = `${data.cognitive_load_capacity}/10`;
+        const el = document.querySelector('.profile-stat:nth-child(2) .profile-stat-value');
+        if (el) el.textContent = `${data.cognitive_load_capacity}/10`;
     }
 
-    // Update user name
-    if (data.name) {
-        const titleEl = document.querySelector('.page-title');
-        if (titleEl) titleEl.textContent = `Welcome back, ${data.name} 👋`;
+    if (data.processing_speed) {
+        const el = document.querySelector('.profile-stat:nth-child(3) .profile-stat-value');
+        if (el) el.textContent = data.processing_speed;
+    }
 
-        const avatarEl = document.querySelector('.user-avatar span');
-        if (avatarEl) {
-            const initials = data.name.split(' ').map(n => n[0]).join('');
-            avatarEl.textContent = initials;
-        }
-
-        const nameEl = document.querySelector('.user-name');
-        if (nameEl) nameEl.textContent = data.name;
+    if (data.working_memory) {
+        const el = document.querySelector('.profile-stat:nth-child(4) .profile-stat-value');
+        if (el) el.textContent = data.working_memory;
     }
 }
 
-function updateRecommendations(data) {
+function updateRecommendations(recommendations) {
     const list = document.querySelector('.recommendation-list');
-    if (!list || !data.recommendations?.length) return;
-
-    // Clear existing and render API recommendations
-    list.innerHTML = '';
+    if (!list || !recommendations?.length) return;
 
     const types = ['video', 'text', 'code'];
+    list.innerHTML = '';
 
-    data.recommendations.slice(0, 3).forEach((rec, index) => {
+    recommendations.slice(0, 3).forEach((rec, index) => {
         const item = document.createElement('div');
         item.className = 'recommendation-item';
         item.innerHTML = `
@@ -175,21 +261,21 @@ function updateRecommendations(data) {
             <div class="rec-content">
                 <h3 class="rec-title">${rec.title || rec.content_id}</h3>
                 <div class="rec-meta">
-                    <span class="rec-type">${rec.content_type || 'Interactive'} • ${rec.duration || '45'} min</span>
+                    <span class="rec-type">${rec.content_type || 'Interactive'} • ${rec.duration_minutes || 45} min</span>
                     <span class="rec-match">${Math.round((rec.score || 0.9) * 100)}% match</span>
                 </div>
             </div>
         `;
         item.addEventListener('click', () => {
-            console.log('Opening:', rec.title || rec.content_id);
+            window.location.href = `lesson.html?topic=${encodeURIComponent(rec.title || rec.content_id)}&difficulty=${rec.difficulty_level || 'intermediate'}`;
         });
         list.appendChild(item);
     });
 }
 
-// ============================================
-// LOADING STATE & FALLBACK
-// ============================================
+// ========================================
+// Loading states
+// ========================================
 
 function showLoadingState() {
     document.querySelectorAll('.stat-value').forEach(el => {
@@ -198,16 +284,15 @@ function showLoadingState() {
 }
 
 function showFallbackData() {
-    // Restore opacity — static HTML values already shown
     document.querySelectorAll('.stat-value').forEach(el => {
         el.style.opacity = '1';
     });
     console.log('Using static fallback data');
 }
 
-// ============================================
-// PROGRESS BAR ANIMATIONS
-// ============================================
+// ========================================
+// Progress bar animations
+// ========================================
 
 function animateProgressBars() {
     const progressFills = document.querySelectorAll('.progress-fill');
@@ -220,20 +305,22 @@ function animateProgressBars() {
 
 setTimeout(animateProgressBars, 500);
 
-// ============================================
-// BUTTON HANDLERS
-// ============================================
+// ========================================
+// Button handlers
+// ========================================
 
+// Export Data button
 document.querySelector('.btn-secondary')?.addEventListener('click', async () => {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/users/demo_user_123/export`);
+        const response = await fetch(`${API_BASE_URL}/api/v1/users/${USER_ID}/export`);
         if (response.ok) {
             const blob = await response.blob();
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'learning-data.json';
+            const url  = URL.createObjectURL(blob);
+            const a    = document.createElement('a');
+            a.href     = url;
+            a.download = `neurolearn-${USER_ID}-export.json`;
             a.click();
+            URL.revokeObjectURL(url);
         } else {
             alert('Export coming soon!');
         }
@@ -242,30 +329,25 @@ document.querySelector('.btn-secondary')?.addEventListener('click', async () => 
     }
 });
 
+// Start Learning button
 document.querySelector('.btn-primary')?.addEventListener('click', async () => {
     try {
         const response = await fetch(`${API_BASE_URL}/api/v1/adaptation/next-lesson`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: 'demo_user_123' })
+            body: JSON.stringify({ user_id: USER_ID })
         });
+
         if (response.ok) {
             const data = await response.json();
-            alert(`Starting: ${data.lesson_title || 'Next Lesson'}`);
+            // ✅ Navigate to AI lesson page with topic and difficulty
+            window.location.href = `lesson.html?topic=${encodeURIComponent(data.lesson_title)}&difficulty=${data.difficulty}`;
         } else {
-            alert('Starting next lesson...');
+            window.location.href = 'lesson.html';
         }
     } catch {
-        alert('Starting next lesson...');
+        window.location.href = 'lesson.html';
     }
-});
-
-// Recommendation click handlers
-document.querySelectorAll('.recommendation-item').forEach(item => {
-    item.addEventListener('click', () => {
-        const title = item.querySelector('.rec-title')?.textContent;
-        console.log('Clicked recommendation:', title);
-    });
 });
 
 // Stat card hover effects
@@ -274,8 +356,12 @@ document.querySelectorAll('.stat-card').forEach(card => {
     card.addEventListener('mouseleave', () => { card.style.transform = 'translateY(0)'; });
 });
 
+// ========================================
 // Helpers
+// ========================================
+
 function capitalize(str) {
+    if (!str) return '';
     return str.charAt(0).toUpperCase() + str.slice(1);
 }
 

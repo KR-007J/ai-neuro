@@ -5,7 +5,8 @@ Endpoints for user management and profile operations
 
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import JSONResponse
-from typing import List
+from typing import List, Optional
+from pydantic import BaseModel
 from app.schemas.user_schema import (
     UserCreate, UserResponse, UserUpdate, UserStats, UserPreferences
 )
@@ -17,6 +18,63 @@ router = APIRouter()
 
 # In-memory storage (replace with database in production)
 users_db = {}
+
+
+# ✅ Google Auth request model
+class GoogleAuthRequest(BaseModel):
+    google_id: str
+    email: str
+    full_name: str
+    avatar_url: Optional[str] = None
+
+
+@router.post("/google-auth", response_model=StandardResponse)
+async def google_auth(request: GoogleAuthRequest):
+    """Handle Google OAuth login — create or fetch existing user"""
+
+    # Check if user already exists by email
+    existing_user = next(
+        (u for u in users_db.values() if u.get("email") == request.email),
+        None
+    )
+
+    if existing_user:
+        existing_user["last_active"] = datetime.now().isoformat()
+        return StandardResponse(
+            success=True,
+            message="User logged in successfully",
+            data=existing_user
+        )
+
+    # Create new user from Google profile
+    user_id = f"google_{request.google_id}"
+    user_data = {
+        "user_id": user_id,
+        "email": request.email,
+        "full_name": request.full_name,
+        "avatar_url": request.avatar_url,
+        "age": None,
+        "education_level": None,
+        "learning_style": "visual",
+        "cognitive_load_capacity": 7.0,
+        "processing_speed": "Medium",
+        "working_memory": "Medium",
+        "sessions_completed": 0,
+        "average_score": 0.0,
+        "engagement_level": 0.0,
+        "streak_days": 0,
+        "preferences": {},
+        "created_at": datetime.now().isoformat(),
+        "last_active": datetime.now().isoformat()
+    }
+
+    users_db[user_id] = user_data
+
+    return StandardResponse(
+        success=True,
+        message="User registered successfully",
+        data=user_data
+    )
 
 
 @router.post("/register", response_model=StandardResponse, status_code=status.HTTP_201_CREATED)
@@ -52,17 +110,20 @@ async def register_user(user: UserCreate):
     )
 
 
+# ✅ /stats and /export must be BEFORE /{user_id} to avoid route conflicts
 @router.get("/{user_id}/stats", response_model=StandardResponse)
 async def get_user_stats(user_id: str):
     """Get user learning statistics"""
+    user = users_db.get(user_id)
+
     stats = UserStats(
         user_id=user_id,
-        total_sessions=24,
+        total_sessions=user.get("sessions_completed", 24) if user else 24,
         total_time_minutes=560,
         completed_modules=8,
-        average_score=78.5,
-        engagement_score=0.82,
-        learning_streak_days=7,
+        average_score=user.get("average_score", 78.5) if user else 78.5,
+        engagement_score=user.get("engagement_level", 0.82) if user else 0.82,
+        learning_streak_days=user.get("streak_days", 7) if user else 7,
         achievements=["First Module", "Week Warrior", "High Achiever"]
     )
 
@@ -117,8 +178,8 @@ async def export_user_data(user_id: str):
 @router.get("/{user_id}", response_model=StandardResponse)
 async def get_user(user_id: str):
     """Get user profile information"""
-    # ✅ Return demo data instead of 404 for unknown users
     if user_id not in users_db:
+        # Return demo data for unknown users instead of 404
         return StandardResponse(
             success=True,
             message="User retrieved successfully",

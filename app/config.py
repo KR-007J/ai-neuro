@@ -54,8 +54,11 @@ class Settings(BaseSettings):
     MIN_RECOMMENDATIONS: int = 3
     MAX_RECOMMENDATIONS: int = 10
 
-    # API Rate Limiting (requests per minute)
+    # API Rate Limiting
     RATE_LIMIT: int = 100
+
+    # ✅ Gemini AI API Key
+    GEMINI_API_KEY: str = ""
 
     class Config:
         env_file = ".env"
