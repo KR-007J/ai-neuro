@@ -5,6 +5,7 @@ Endpoints for adaptive learning and content recommendations
 
 from fastapi import APIRouter, HTTPException, status
 from typing import List, Dict, Optional
+from pydantic import BaseModel
 from app.schemas.response_schema import (
     StandardResponse, ContentRecommendation, AdaptationResponse, LearningPath
 )
@@ -15,11 +16,9 @@ import uuid
 
 router = APIRouter()
 
-# Initialize engines
 adaptation_engine = AdaptationEngine()
 recommendation_engine = RecommendationEngine()
 
-# Mock content database
 MOCK_CONTENT = [
     {
         "content_id": "c001",
@@ -72,27 +71,52 @@ MOCK_CONTENT = [
 ]
 
 
-@router.post("/recommend-content", response_model=StandardResponse)
-async def recommend_content(
-    user_id: str,
-    user_profile: Dict,
-    performance_history: List[float],
+# ✅ Pydantic request models — fixes 422 errors
+class RecommendationRequest(BaseModel):
+    user_id: str
+    user_profile: Dict
+    performance_history: List[float]
     completed_content: List[str] = []
-):
-    """
-    Get personalized content recommendations
-    
-    Returns a list of recommended learning content based on user profile,
-    performance history, and learning goals.
-    """
+
+
+class NextLessonRequest(BaseModel):
+    user_id: str
+
+
+class DifficultyAdjustRequest(BaseModel):
+    user_id: str
+    current_difficulty: str
+    performance_history: List[float]
+    engagement_history: List[float]
+    error_rates: List[float] = []
+
+
+class EngagementRequest(BaseModel):
+    time_on_task: int
+    interaction_count: int
+    completion_rate: float
+    focus_level: float
+    error_rate: float
+
+
+class CognitiveLoadRequest(BaseModel):
+    task_complexity: int
+    user_capacity: float
+    time_pressure: float
+
+
+# ✅ Fixed — accepts JSON body via RecommendationRequest model
+@router.post("/recommend-content", response_model=StandardResponse)
+async def recommend_content(request: RecommendationRequest):
+    """Get personalized content recommendations"""
     try:
         recommendations = recommendation_engine.generate_recommendations(
-            user_profile=user_profile,
+            user_profile=request.user_profile,
             available_content=MOCK_CONTENT,
-            performance_history=performance_history,
-            completed_content=completed_content
+            performance_history=request.performance_history,
+            completed_content=request.completed_content
         )
-        
+
         return StandardResponse(
             success=True,
             message=f"Generated {len(recommendations)} recommendations",
@@ -105,61 +129,65 @@ async def recommend_content(
         )
 
 
+# ✅ New endpoint — fixes 404 on Start Learning button
+@router.post("/next-lesson")
+async def get_next_lesson(request: NextLessonRequest):
+    """Get next recommended lesson for user"""
+    return {
+        "user_id": request.user_id,
+        "lesson_id": "lesson_004",
+        "lesson_title": "Dictionary Methods & Comprehensions",
+        "module": "Data Structures",
+        "estimated_duration": 45,
+        "difficulty": "intermediate"
+    }
+
+
+# ✅ Fixed — accepts JSON body via DifficultyAdjustRequest model
 @router.post("/adjust-difficulty", response_model=StandardResponse)
-async def adjust_difficulty(
-    user_id: str,
-    current_difficulty: str,
-    performance_history: List[float],
-    engagement_history: List[float],
-    error_rates: List[float] = []
-):
-    """
-    Adjust content difficulty based on performance
-    
-    Dynamically adjusts difficulty level based on user performance metrics.
-    """
+async def adjust_difficulty(request: DifficultyAdjustRequest):
+    """Adjust content difficulty based on performance"""
     try:
         new_difficulty, reasoning = adaptation_engine.adjust_difficulty(
-            current_difficulty=current_difficulty,
-            performance_history=performance_history,
-            engagement_history=engagement_history,
-            error_rates=error_rates
+            current_difficulty=request.current_difficulty,
+            performance_history=request.performance_history,
+            engagement_history=request.engagement_history,
+            error_rates=request.error_rates
         )
-        
-        # Get recommendations for new difficulty
+
         mock_profile = {
-            "user_id": user_id,
+            "user_id": request.user_id,
             "learning_style": "multimodal",
             "cognitive_load_capacity": 6.0,
             "current_difficulty": new_difficulty
         }
-        
+
         recommendations = recommendation_engine.generate_recommendations(
             user_profile=mock_profile,
             available_content=MOCK_CONTENT,
-            performance_history=performance_history,
+            performance_history=request.performance_history,
             completed_content=[]
         )
-        
+
         adaptation_recommendations = adaptation_engine.generate_adaptation_recommendations(
             user_profile=mock_profile,
             performance_data={
-                "error_rate": error_rates[-1] if error_rates else 0.0,
+                "error_rate": request.error_rates[-1] if request.error_rates else 0.0,
                 "completion_rate": 0.8,
-                "focus_level": engagement_history[-1] if engagement_history else 0.7
+                "focus_level": request.engagement_history[-1] if request.engagement_history else 0.7
             }
         )
-        
+
         response = AdaptationResponse(
-            user_id=user_id,
-            current_difficulty=current_difficulty,
+            user_id=request.user_id,
+            current_difficulty=request.current_difficulty,
             recommended_difficulty=new_difficulty,
-            difficulty_changed=(new_difficulty != current_difficulty),
+            difficulty_changed=(new_difficulty != request.current_difficulty),
             reasoning=reasoning,
             recommendations=recommendations,
             next_steps=adaptation_recommendations
         )
-        
+
         return StandardResponse(
             success=True,
             message="Difficulty adjustment completed",
@@ -173,42 +201,36 @@ async def adjust_difficulty(
 
 
 @router.get("/learning-path/{user_id}", response_model=StandardResponse)
-async def get_learning_path(
-    user_id: str,
-    learning_goal: str = "Python Programming"
-):
-    """
-    Get personalized learning path
-    
-    Generates an optimal sequence of learning modules to achieve the goal.
-    """
+async def get_learning_path(user_id: str, learning_goal: str = "Python Programming"):
+    """Get personalized learning path"""
     try:
         mock_profile = {
             "user_id": user_id,
             "learning_style": "multimodal",
             "cognitive_load_capacity": 6.0
         }
-        
+
         path_modules = recommendation_engine.generate_learning_path(
             user_profile=mock_profile,
             learning_goal=learning_goal,
             available_modules=MOCK_CONTENT
         )
-        
+
         learning_path = LearningPath(
             path_id=str(uuid.uuid4()),
             user_id=user_id,
             title=f"Path to {learning_goal}",
             description=f"Personalized learning path for mastering {learning_goal}",
             total_modules=len(path_modules),
-            estimated_completion_hours=sum(m.get("duration_minutes", 0) for m in path_modules) // 60,
+            estimated_completion_hours=sum(
+                m.get("duration_minutes", 0) for m in path_modules) // 60,
             current_module=0,
             completion_percentage=0.0,
             modules=path_modules,
             created_at=datetime.now(),
             last_updated=datetime.now()
         )
-        
+
         return StandardResponse(
             success=True,
             message="Learning path generated successfully",
@@ -221,35 +243,26 @@ async def get_learning_path(
         )
 
 
+# ✅ Fixed — accepts JSON body via EngagementRequest model
 @router.post("/calculate-engagement", response_model=StandardResponse)
-async def calculate_engagement(
-    time_on_task: int,
-    interaction_count: int,
-    completion_rate: float,
-    focus_level: float,
-    error_rate: float
-):
-    """
-    Calculate engagement score from metrics
-    
-    Computes overall engagement score from various learning metrics.
-    """
+async def calculate_engagement(request: EngagementRequest):
+    """Calculate engagement score from metrics"""
     from app.schemas.assessment_schema import LearningAnalytics
-    
+
     analytics = LearningAnalytics(
         user_id="temp",
         session_id="temp",
-        engagement_score=0.0,  # Will be calculated
-        focus_level=focus_level,
-        interaction_count=interaction_count,
-        time_on_task_minutes=time_on_task,
-        completion_rate=completion_rate,
-        error_rate=error_rate,
+        engagement_score=0.0,
+        focus_level=request.focus_level,
+        interaction_count=request.interaction_count,
+        time_on_task_minutes=request.time_on_task,
+        completion_rate=request.completion_rate,
+        error_rate=request.error_rate,
         help_requests=0
     )
-    
+
     engagement_score = adaptation_engine.calculate_engagement_score(analytics)
-    
+
     return StandardResponse(
         success=True,
         message="Engagement score calculated",
@@ -263,32 +276,25 @@ async def calculate_engagement(
             "recommendations": adaptation_engine.generate_adaptation_recommendations(
                 user_profile={"learning_style": "multimodal"},
                 performance_data={
-                    "error_rate": error_rate,
-                    "completion_rate": completion_rate,
-                    "focus_level": focus_level
+                    "error_rate": request.error_rate,
+                    "completion_rate": request.completion_rate,
+                    "focus_level": request.focus_level
                 }
             )
         }
     )
 
 
+# ✅ Fixed — accepts JSON body via CognitiveLoadRequest model
 @router.post("/cognitive-load", response_model=StandardResponse)
-async def calculate_cognitive_load(
-    task_complexity: int,
-    user_capacity: float,
-    time_pressure: float
-):
-    """
-    Calculate cognitive load for a task
-    
-    Estimates cognitive load based on task complexity and user capacity.
-    """
+async def calculate_cognitive_load(request: CognitiveLoadRequest):
+    """Calculate cognitive load for a task"""
     load = adaptation_engine.calculate_cognitive_load(
-        task_complexity=task_complexity,
-        user_capacity=user_capacity,
-        time_pressure=time_pressure
+        task_complexity=request.task_complexity,
+        user_capacity=request.user_capacity,
+        time_pressure=request.time_pressure
     )
-    
+
     return StandardResponse(
         success=True,
         message="Cognitive load calculated",
@@ -313,19 +319,21 @@ async def get_content_library(
     difficulty_level: Optional[str] = None,
     content_type: Optional[str] = None
 ):
-    """
-    Get available content library
-    
-    Returns filtered content based on criteria.
-    """
+    """Get available content library"""
     filtered_content = MOCK_CONTENT
-    
+
     if difficulty_level:
-        filtered_content = [c for c in filtered_content if c["difficulty_level"] == difficulty_level]
-    
+        filtered_content = [
+            c for c in filtered_content
+            if c["difficulty_level"] == difficulty_level
+        ]
+
     if content_type:
-        filtered_content = [c for c in filtered_content if c["content_type"] == content_type]
-    
+        filtered_content = [
+            c for c in filtered_content
+            if c["content_type"] == content_type
+        ]
+
     return StandardResponse(
         success=True,
         message=f"Retrieved {len(filtered_content)} content items",
