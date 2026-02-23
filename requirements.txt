@@ -18,8 +18,10 @@ scipy==1.11.4
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 
-# HTTP client
+# ✅ HTTP client — needed for Gemini API calls
 httpx==0.26.0
+
+# HTTP requests
 requests==2.32.5
 
 # Database
