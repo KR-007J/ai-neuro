@@ -4,6 +4,7 @@ Endpoints for user management and profile operations
 """
 
 from fastapi import APIRouter, HTTPException, status
+from fastapi.responses import JSONResponse
 from typing import List
 from app.schemas.user_schema import (
     UserCreate, UserResponse, UserUpdate, UserStats, UserPreferences
@@ -20,6 +21,7 @@ users_db = {}
 
 @router.post("/register", response_model=StandardResponse, status_code=status.HTTP_201_CREATED)
 async def register_user(user: UserCreate):
+    """Register a new user"""
     if any(u.get("email") == user.email for u in users_db.values()):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -50,9 +52,72 @@ async def register_user(user: UserCreate):
     )
 
 
+@router.get("/{user_id}/stats", response_model=StandardResponse)
+async def get_user_stats(user_id: str):
+    """Get user learning statistics"""
+    stats = UserStats(
+        user_id=user_id,
+        total_sessions=24,
+        total_time_minutes=560,
+        completed_modules=8,
+        average_score=78.5,
+        engagement_score=0.82,
+        learning_streak_days=7,
+        achievements=["First Module", "Week Warrior", "High Achiever"]
+    )
+
+    return StandardResponse(
+        success=True,
+        message="User statistics retrieved successfully",
+        data=stats.dict()
+    )
+
+
+@router.get("/{user_id}/export")
+async def export_user_data(user_id: str):
+    """Export user learning data as downloadable JSON"""
+    user_data = users_db.get(user_id, {
+        "user_id": user_id,
+        "full_name": "Krishna Mishra",
+        "email": "krishna@example.com",
+        "learning_style": "visual",
+        "cognitive_load_capacity": 7.5,
+        "processing_speed": "Fast",
+        "working_memory": "High"
+    })
+
+    export_data = {
+        "exported_at": datetime.now().isoformat(),
+        "user": user_data,
+        "stats": {
+            "total_sessions": 24,
+            "total_time_minutes": 560,
+            "completed_modules": 8,
+            "average_score": 78.5,
+            "engagement_score": 0.82,
+            "learning_streak_days": 7,
+            "achievements": ["First Module", "Week Warrior", "High Achiever"]
+        },
+        "progress": [
+            {"module": "Python Basics",               "completion": 100, "score": 95},
+            {"module": "Data Structures",             "completion": 75,  "score": 82},
+            {"module": "Object-Oriented Programming", "completion": 45,  "score": 78},
+            {"module": "Advanced Algorithms",         "completion": 0,   "score": None}
+        ]
+    }
+
+    return JSONResponse(
+        content=export_data,
+        headers={
+            "Content-Disposition": f"attachment; filename=neurolearn-{user_id}-export.json"
+        }
+    )
+
+
 @router.get("/{user_id}", response_model=StandardResponse)
 async def get_user(user_id: str):
-    # ✅ Return demo data instead of 404 when user not in DB
+    """Get user profile information"""
+    # ✅ Return demo data instead of 404 for unknown users
     if user_id not in users_db:
         return StandardResponse(
             success=True,
@@ -89,6 +154,7 @@ async def get_user(user_id: str):
 
 @router.put("/{user_id}", response_model=StandardResponse)
 async def update_user(user_id: str, user_update: UserUpdate):
+    """Update user profile"""
     if user_id not in users_db:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -112,6 +178,7 @@ async def update_user(user_id: str, user_update: UserUpdate):
 
 @router.put("/{user_id}/preferences", response_model=StandardResponse)
 async def update_preferences(user_id: str, preferences: UserPreferences):
+    """Update user learning preferences"""
     if user_id not in users_db:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -130,29 +197,9 @@ async def update_preferences(user_id: str, preferences: UserPreferences):
     )
 
 
-@router.get("/{user_id}/stats", response_model=StandardResponse)
-async def get_user_stats(user_id: str):
-    # ✅ Return demo stats instead of 404 for unknown users
-    stats = UserStats(
-        user_id=user_id,
-        total_sessions=24,
-        total_time_minutes=560,
-        completed_modules=8,
-        average_score=78.5,
-        engagement_score=0.82,
-        learning_streak_days=7,
-        achievements=["First Module", "Week Warrior", "High Achiever"]
-    )
-
-    return StandardResponse(
-        success=True,
-        message="User statistics retrieved successfully",
-        data=stats.dict()
-    )
-
-
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(user_id: str):
+    """Delete user account"""
     if user_id not in users_db:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -165,6 +212,7 @@ async def delete_user(user_id: str):
 
 @router.get("/", response_model=StandardResponse)
 async def list_users(skip: int = 0, limit: int = 10):
+    """List all users"""
     users_list = list(users_db.values())[skip:skip + limit]
     user_responses = [UserResponse(**user) for user in users_list]
 
