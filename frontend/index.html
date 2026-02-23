@@ -8,6 +8,96 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        /* Logout button */
+        .logout-btn {
+            margin-top: 12px;
+            width: 100%;
+            padding: 9px;
+            background: none;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            color: #6b7280;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .logout-btn:hover {
+            border-color: #ef4444;
+            color: #ef4444;
+            background: #fef2f2;
+        }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #1f2937;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            transform: translateY(80px);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .toast.success { background: linear-gradient(135deg, #10b981, #059669); }
+        .toast.error   { background: linear-gradient(135deg, #ef4444, #dc2626); }
+        .toast.info    { background: linear-gradient(135deg, #667eea, #764ba2); }
+
+        /* Loading spinner on buttons */
+        .btn-loading {
+            opacity: 0.7;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+        .btn-spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.4);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Clickable recommendation items */
+        .recommendation-item {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .recommendation-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        /* Clickable progress items */
+        .progress-item.clickable {
+            cursor: pointer;
+            border-radius: 12px;
+            padding: 8px;
+            margin: -8px;
+            transition: background 0.2s;
+        }
+        .progress-item.clickable:hover { background: #f9fafb; }
+    </style>
 </head>
 <body>
     <!-- Animated Background -->
@@ -16,6 +106,9 @@
         <div class="gradient-orb orb-2"></div>
         <div class="gradient-orb orb-3"></div>
     </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast"></div>
 
     <!-- Sidebar Navigation -->
     <nav class="sidebar">
@@ -46,20 +139,20 @@
                 </svg>
                 <span>Dashboard</span>
             </a>
-            <a href="#assessment" class="nav-item">
+            <a href="lesson.html" class="nav-item">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
                 </svg>
-                <span>Assessment</span>
+                <span>Start Lesson</span>
             </a>
-            <a href="#learning" class="nav-item">
+            <a href="#learning" class="nav-item" id="nav-learning">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
                     <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
                 </svg>
                 <span>Learning Path</span>
             </a>
-            <a href="#analytics" class="nav-item">
+            <a href="#analytics" class="nav-item" id="nav-analytics">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="18" y1="20" x2="18" y2="10"/>
                     <line x1="12" y1="20" x2="12" y2="4"/>
@@ -71,14 +164,14 @@
 
         <div class="nav-section">
             <div class="nav-label">LIBRARY</div>
-            <a href="#achievements" class="nav-item">
+            <a href="#achievements" class="nav-item" id="nav-achievements">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
                 </svg>
                 <span>Achievements</span>
-                <span class="badge">3</span>
+                <span class="badge" id="achievements-badge">3</span>
             </a>
-            <a href="#community" class="nav-item">
+            <a href="#community" class="nav-item" id="nav-community">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
                     <circle cx="9" cy="7" r="4"/>
@@ -91,14 +184,25 @@
 
         <div class="sidebar-footer">
             <div class="user-profile">
-                <div class="user-avatar">
-                    <span>KM</span>
+                <!-- Updated dynamically by app.js -->
+                <div class="user-avatar" id="user-avatar">
+                    <span>U</span>
                 </div>
                 <div class="user-info">
-                    <div class="user-name">Krishna Mishra</div>
-                    <div class="user-status">Pro Member</div>
+                    <div class="user-name" id="user-name">Loading...</div>
+                    <div class="user-status" id="user-status">Pro Member</div>
                 </div>
             </div>
+
+            <!-- ✅ Working logout button -->
+            <button class="logout-btn" onclick="logout()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                    <polyline points="16 17 21 12 16 7"/>
+                    <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+                Sign Out
+            </button>
         </div>
     </nav>
 
@@ -108,11 +212,13 @@
         <header class="page-header">
             <div class="header-content">
                 <div class="header-title-group">
-                    <h1 class="page-title">Welcome back, Krishna 👋</h1>
+                    <!-- Updated dynamically by app.js -->
+                    <h1 class="page-title" id="page-title">Welcome back 👋</h1>
                     <p class="page-subtitle">Here's your learning progress today</p>
                 </div>
                 <div class="header-actions">
-                    <button class="btn btn-secondary">
+                    <!-- ✅ Export Data — calls backend and downloads JSON -->
+                    <button class="btn btn-secondary" id="btn-export">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                             <polyline points="7 10 12 15 17 10"/>
@@ -120,7 +226,9 @@
                         </svg>
                         Export Data
                     </button>
-                    <button class="btn btn-primary">
+
+                    <!-- ✅ Start Learning — calls backend then goes to AI lesson -->
+                    <button class="btn btn-primary" id="btn-start">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="10"/>
                             <polyline points="12 6 12 12 16 14"/>
@@ -143,7 +251,7 @@
                     </div>
                     <span class="stat-trend up">+12%</span>
                 </div>
-                <div class="stat-value">24</div>
+                <div class="stat-value" id="stat-sessions">24</div>
                 <div class="stat-label">Sessions Completed</div>
             </div>
 
@@ -158,7 +266,7 @@
                     </div>
                     <span class="stat-trend up">+5.2%</span>
                 </div>
-                <div class="stat-value">78.5<span class="stat-unit">%</span></div>
+                <div class="stat-value" id="stat-score">78.5<span class="stat-unit">%</span></div>
                 <div class="stat-label">Average Score</div>
             </div>
 
@@ -171,7 +279,7 @@
                     </div>
                     <span class="stat-trend up">+7%</span>
                 </div>
-                <div class="stat-value">82<span class="stat-unit">%</span></div>
+                <div class="stat-value" id="stat-engagement">82<span class="stat-unit">%</span></div>
                 <div class="stat-label">Engagement Level</div>
             </div>
 
@@ -186,24 +294,27 @@
                     </div>
                     <span class="stat-trend up">7 days</span>
                 </div>
-                <div class="stat-value">🔥 <span>7</span></div>
+                <div class="stat-value" id="stat-streak">🔥 <span>7</span></div>
                 <div class="stat-label">Day Streak</div>
             </div>
         </div>
 
         <!-- Main Dashboard Grid -->
         <div class="dashboard-grid">
+
             <!-- Learning Progress Card -->
             <div class="card large" style="--delay: 0.5s">
                 <div class="card-header">
                     <div>
                         <h2 class="card-title">Learning Progress</h2>
-                        <p class="card-subtitle">Your module completion status</p>
+                        <p class="card-subtitle">Click any module to start learning</p>
                     </div>
                 </div>
                 <div class="card-body">
                     <div class="progress-list">
-                        <div class="progress-item">
+
+                        <!-- ✅ Completed module — clicking shows toast -->
+                        <div class="progress-item clickable" onclick="showToast('Python Basics is already completed! 🎉', 'success')">
                             <div class="progress-icon completed">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
                                     <polyline points="20 6 9 17 4 12"/>
@@ -220,12 +331,13 @@
                                     </div>
                                 </div>
                                 <div class="progress-meta">
-                                    <span class="progress-lessons">12 lessons • Completed</span>
+                                    <span class="progress-lessons">12 lessons • Completed ✓</span>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="progress-item">
+                        <!-- ✅ Active module — clicking goes to AI lesson -->
+                        <div class="progress-item clickable" onclick="goToLesson('Dictionary Methods & Comprehensions', 'intermediate')">
                             <div class="progress-icon active">
                                 <div class="spinner"></div>
                             </div>
@@ -241,12 +353,13 @@
                                 </div>
                                 <div class="progress-meta">
                                     <span class="progress-lessons">9 of 12 lessons</span>
-                                    <span class="progress-time">3h left</span>
+                                    <span class="progress-time">→ Continue</span>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="progress-item">
+                        <!-- ✅ In progress module — clicking goes to AI lesson -->
+                        <div class="progress-item clickable" onclick="goToLesson('Classes and Objects in Python', 'intermediate')">
                             <div class="progress-icon">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <circle cx="12" cy="12" r="10"/>
@@ -264,11 +377,13 @@
                                 </div>
                                 <div class="progress-meta">
                                     <span class="progress-lessons">5 of 11 lessons</span>
+                                    <span class="progress-time">→ Start</span>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="progress-item">
+                        <!-- ✅ Locked module — clicking shows toast explaining requirement -->
+                        <div class="progress-item clickable" onclick="showToast('Complete Object-Oriented Programming first to unlock this! 🔒', 'info')">
                             <div class="progress-icon locked">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
@@ -285,6 +400,7 @@
                                 </div>
                             </div>
                         </div>
+
                     </div>
                 </div>
             </div>
@@ -308,7 +424,7 @@
                             </div>
                             <div class="profile-stat-content">
                                 <div class="profile-stat-label">Learning Style</div>
-                                <div class="profile-stat-value">Visual</div>
+                                <div class="profile-stat-value" id="profile-style">Visual</div>
                             </div>
                         </div>
 
@@ -320,7 +436,7 @@
                             </div>
                             <div class="profile-stat-content">
                                 <div class="profile-stat-label">Cognitive Capacity</div>
-                                <div class="profile-stat-value">7.5/10</div>
+                                <div class="profile-stat-value" id="profile-capacity">7.5/10</div>
                             </div>
                         </div>
 
@@ -332,7 +448,7 @@
                             </div>
                             <div class="profile-stat-content">
                                 <div class="profile-stat-label">Processing Speed</div>
-                                <div class="profile-stat-value">Fast</div>
+                                <div class="profile-stat-value" id="profile-speed">Fast</div>
                             </div>
                         </div>
 
@@ -345,7 +461,7 @@
                             </div>
                             <div class="profile-stat-content">
                                 <div class="profile-stat-label">Working Memory</div>
-                                <div class="profile-stat-value">High</div>
+                                <div class="profile-stat-value" id="profile-memory">High</div>
                             </div>
                         </div>
                     </div>
@@ -357,12 +473,13 @@
                 <div class="card-header">
                     <div>
                         <h2 class="card-title">Recommended For You</h2>
-                        <p class="card-subtitle">AI-powered suggestions</p>
+                        <p class="card-subtitle">Click any to start AI lesson</p>
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="recommendation-list">
-                        <div class="recommendation-item">
+                    <!-- Populated dynamically by app.js from API -->
+                    <div class="recommendation-list" id="recommendation-list">
+                        <div class="recommendation-item" onclick="goToLesson('Python Data Visualization', 'intermediate')">
                             <div class="rec-thumbnail video"></div>
                             <div class="rec-content">
                                 <h3 class="rec-title">Python Data Visualization</h3>
@@ -372,8 +489,7 @@
                                 </div>
                             </div>
                         </div>
-
-                        <div class="recommendation-item">
+                        <div class="recommendation-item" onclick="goToLesson('Algorithmic Thinking', 'intermediate')">
                             <div class="rec-thumbnail text"></div>
                             <div class="rec-content">
                                 <h3 class="rec-title">Algorithmic Thinking</h3>
@@ -383,8 +499,7 @@
                                 </div>
                             </div>
                         </div>
-
-                        <div class="recommendation-item">
+                        <div class="recommendation-item" onclick="goToLesson('Design Patterns', 'advanced')">
                             <div class="rec-thumbnail code"></div>
                             <div class="rec-content">
                                 <h3 class="rec-title">Design Patterns</h3>
@@ -416,7 +531,6 @@
                             </div>
                             <div class="activity-badge success">+100 XP</div>
                         </div>
-
                         <div class="activity-item">
                             <div class="activity-dot achievement"></div>
                             <div class="activity-content">
@@ -424,7 +538,6 @@
                                 <div class="activity-time">1 day ago</div>
                             </div>
                         </div>
-
                         <div class="activity-item">
                             <div class="activity-dot progress"></div>
                             <div class="activity-content">
@@ -433,7 +546,6 @@
                             </div>
                             <div class="activity-badge">75%</div>
                         </div>
-
                         <div class="activity-item">
                             <div class="activity-dot completed"></div>
                             <div class="activity-content">
@@ -445,9 +557,35 @@
                     </div>
                 </div>
             </div>
+
         </div>
     </main>
 
     <script src="app.js"></script>
+    <script>
+        // ✅ Navigate to AI lesson page
+        function goToLesson(topic, difficulty = 'intermediate') {
+            window.location.href = `lesson.html?topic=${encodeURIComponent(topic)}&difficulty=${difficulty}`;
+        }
+
+        // ✅ Toast notification system
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const icons = {
+                success: '✅',
+                error: '❌',
+                info: 'ℹ️'
+            };
+            toast.innerHTML = `${icons[type]} ${message}`;
+            toast.className = `toast ${type} show`;
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Expose showToast globally for app.js to use
+        window.showToast = showToast;
+        window.goToLesson = goToLesson;
+    </script>
 </body>
 </html>
